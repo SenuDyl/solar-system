@@ -82,14 +82,34 @@ jobs:
     code-coverage:
         name: Code Coverage
         runs-on: ubuntu-latest
+       
+        container:
+          image: node:18
+
+        services:
+          mongo:
+            image: mongo:non-prod
+            options:
+              --name mongo
+
+            # We don't need to expose the port to the host machine since the tests will run inside the container,
+            # and they can access the MongoDB service using the internal network.
+
+        env:
+          # The mongo_uri now can use the service name (mongo) as the hostname,
+          # which allows the tests to connect to the MongoDB service running in the container.
+          MONGO_URI: "mongodb://mongo:27017/superData"
+          MONGO_USERNAME: non-prod-username
+          MONGO_PASSWORD: non-prod-password
+
         steps:
         - name: Checkout Repository
           uses: actions/checkout@v4
 
-        - name: Setup NodeJS Version
-          uses: actions/setup-node@v3
-          with:
-            node-version: 18
+        # - name: Setup NodeJS Version
+        #   uses: actions/setup-node@v3
+        #   with:
+        #     node-version: 18
     
         - name: Install Dependencies
           run: npm install
