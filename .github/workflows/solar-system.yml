@@ -7,13 +7,25 @@ on:
       - main
       - 'feature/*'
 
-env:
-  MONGO_URI: "mongodb://localhost:27017/solarDB"
-  MONGO_USERNAME: ${{ vars.MONGO_USERNAME }}
-  MONGO_PASSWORD: ${{ secrets.MONGO_PASSWORD }}
+# env:
+#   MONGO_URI: "mongodb://localhost:27017/solarDB"
+#   MONGO_USERNAME: ${{ vars.MONGO_USERNAME }}
+#   MONGO_PASSWORD: ${{ secrets.MONGO_PASSWORD }}
+
     
 jobs:
     unit-testing:
+        # Start a MongoDB container
+        services:
+          mongodb:
+            image: mongo:6
+            ports:
+              - 27017:27017
+
+        env:
+          # Local MongoDB connection (no username/password)
+          MONGO_URI: mongodb://localhost:27017/solarDB
+          
         name: Unit Testing
         runs-on: ubuntu-latest
         steps:
