@@ -96,3 +96,14 @@ jobs:
           with:
             username: ${{ vars.DOCKER_USERNAME }}
             password: ${{ secrets.DOCKER_PASSWORD }}
+
+        - name: Build and Push Docker Image
+          uses: docker/build-push-action@v3
+          with:
+            context: . # Search for Dockerfile in the root directory
+            push: true
+            tags: ${{ vars.DOCKER_USERNAME }}/solar-system:${{ github.sha }}
+
+        - name: Test Docker Image
+          run: |
+            docker run --rm ${{ vars.DOCKER_USERNAME }}/solar-system:${{ github.sha }} npm test
