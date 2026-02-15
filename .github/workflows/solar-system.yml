@@ -25,9 +25,17 @@ jobs:
         env:
           # Local MongoDB connection (no username/password)
           MONGO_URI: mongodb://localhost:27017/solarDB
-          
+
+        strategy:
+          matrix:
+            node-version: [18, 20]
+            os: [ubuntu-latest, windows-latest]
+            exclude:
+              - node-version: 20
+                os: windows-latest
+
         name: Unit Testing
-        runs-on: ubuntu-latest
+        runs-on: ${{ matrix.os }}
         steps:
         - name: Checkout Repository
           uses: actions/checkout@v4
@@ -35,7 +43,7 @@ jobs:
         - name: Setup NodeJS Version
           uses: actions/setup-node@v3
           with:
-            node-version: 20
+            node-version: ${{ matrix.node-version }}
     
         - name: Install Dependencies
           run: npm install
