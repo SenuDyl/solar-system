@@ -26,6 +26,27 @@ jobs:
             node-version: [20]
             os: [ubuntu-latest]
 
+        # Servive can be used to run a MongoDB instance for testing purposes. 
+        # A service is a separate container that runs alongside the job's main container, 
+        # allowing you to run dependencies like databases or other services needed for your tests.
+        # Here, you can specify the image of your test database (e.g., MongoDB) and the ports to expose.
+
+        services:
+          mongo:
+            image: mongo:non-prod
+            ports:
+              - 27017:27017
+
+        # These environment variables will be available to all steps in the job.
+        # They will take precedence over the global environment variables defined at the workflow/repo level, 
+        # allowing you to override them for this specific job if needed.
+
+        env:
+          # The mongo_uri is a local connection string that points to the MongoDB service running in the 
+          # container.
+          MONGO_URI: "mongodb://localhost:27017/superData"
+          MONGO_USERNAME: non-prod-username
+          MONGO_PASSWORD: non-prod-password
 
         name: Unit Testing
         runs-on: ${{ matrix.os }}
@@ -97,13 +118,20 @@ jobs:
             username: ${{ vars.DOCKER_USERNAME }}
             password: ${{ secrets.DOCKER_PASSWORD }}
 
-        - name: Build and Push Docker Image
+        - name: Build Docker Image
           uses: docker/build-push-action@v3
           with:
             context: . # Search for Dockerfile in the root directory
-            push: true
+            push: false
             tags: ${{ vars.DOCKER_USERNAME }}/solar-system:${{ github.sha }}
 
         - name: Test Docker Image
           run: |
             docker run --rm ${{ vars.DOCKER_USERNAME }}/solar-system:${{ github.sha }} npm test
+
+        - name: Push Docker Image
+          uses: docker/build-push-action@v3
+          with:
+            context: . # Search for Dockerfile in the root directory
+            push: true
+            tags: ${{ vars.DOCKER_USERNAME }}/solar-system:${{ github.sha }}
