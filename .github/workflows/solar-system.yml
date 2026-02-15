@@ -163,7 +163,18 @@ jobs:
 
     dev-deploy:
       name: Deploy on Kubernetes
-      runs-on: ubuntu-latest
+
+      # The environment keyword in GitHub Actions is used to specify the environment to which the job will be deployed.
+      # This is applied below the job level, and it allows you to define environment-specific settings, such as URLs or secrets, 
+      # that can be used in the steps of the job.
+      # Difference between env and environment: 
+      # env is used to set environment variables that are available to the steps in the job, 
+      # while environment is used to specify the deployment environment and its associated settings.
+      environment:
+        name: development
+        url: http://${{ steps.set-ingress-url.outputs.APP_INGRESS_HOST }}
+
+      runs-on: ubuntu-latest     
       outputs:
         APP_INGRESS_HOST: ${{ steps.set-ingress-url.outputs.APP_INGRESS_HOST }}
       needs: docker
