@@ -183,7 +183,7 @@ jobs:
     steps:
       - name: Test URL output using curl and JQ
         env:
-          APP_INGRESS_HOST: ${{ steps.set-ingress-url.outputs.APP_INGRESS_HOST }}
+          APP_INGRESS_HOST: ${{ needs.dev-deploy.outputs.app-ingress-url }}
         run: |
           echo $APP_INGRESS_HOST
           RESPONSE=$(curl -s http://$APP_INGRESS_HOST/live)
@@ -218,7 +218,7 @@ jobs:
     steps:
       - name: Test URL output using curl and JQ
         env:
-          APP_INGRESS_HOST: ${{ steps.set-ingress-url.outputs.APP_INGRESS_HOST }}
+          APP_INGRESS_HOST: ${{ needs.prod-deploy.outputs.app-ingress-url }}
         run: |
           echo $APP_INGRESS_HOST
           RESPONSE=$(curl -s http://$APP_INGRESS_HOST/live)

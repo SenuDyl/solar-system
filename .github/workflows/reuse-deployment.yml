@@ -26,6 +26,10 @@ on:
             mongo-password:
                 required: true
 
+        outputs:
+            app-ingress-url:
+                value: ${{ jobs.reuse-deployment.outputs.APP_INGRESS_HOST }}
+
 jobs:
     reuse-deployment:
         # The environment keyword in GitHub Actions is used to specify the environment to which the job will be deployed.
