@@ -1,4 +1,4 @@
-name: 'Giphy PR Comment Workflow'
+name: 'Giphy PR Comment Workflow with Both Docker and JS Actions'
 
 on:
   pull_request:
