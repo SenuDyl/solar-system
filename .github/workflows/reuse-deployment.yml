@@ -1,0 +1,87 @@
+name: Deployment - Reuse Workflow
+
+on:
+    workflow_call:
+        secrets:
+            k8-kubeconfig:
+                required: true
+            mongo-password:
+                required: true
+
+jobs:
+    reuse-deployment:
+        # The environment keyword in GitHub Actions is used to specify the environment to which the job will be deployed.
+        # This is applied below the job level, and it allows you to define environment-specific settings, such as URLs or secrets,
+        # that can be used in the steps of the job.
+        # Difference between env and environment:
+        # env is used to set environment variables that are available to the steps in the job,
+        # while environment is used to specify the deployment environment and its associated settings.
+        environment:
+            name: development
+            url: http://${{ steps.set-ingress-url.outputs.APP_INGRESS_HOST }}
+
+        runs-on: ubuntu-latest
+        outputs:
+            APP_INGRESS_HOST: ${{ steps.set-ingress-url.outputs.APP_INGRESS_HOST }}
+        steps:
+            - name: Checkout Repository
+              uses: actions/checkout@v4
+
+            - name: Set up Kubeconfig
+              uses: azure/k8s-set-context@v3
+              with:
+                  kubeconfig: ${{ secrets.KUBE_CONFIG }}
+
+            - name: Install Kubectly CLI
+              uses: azure/setup-kubectl@v3
+              with:
+                  version: "latest"
+
+            - name: Fetch Kubernetes cluster information
+              run: |
+                  kubectl cluster-info
+                  echo "------------------------------------"
+                  kubectl get nodes
+
+            # Ingress is a Kubernetes resource that manages external access to services within a cluster, typically HTTP.
+            - name: Get Ingress IP
+              id: get-ingress-ip
+              # Here we are saving the Ingress IP to a GitHub Actions environment variable (INGRESS_IP) using the $GITHUB_ENV file,
+              # which allows us to use this variable in subsequent steps of the workflow.
+              run: |
+                  INGRESS_IP=$(kubectl get svc -n ingress-nginx ingress-nginx-controller -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+                  echo "INGRESS_IP=$INGRESS_IP" >> $GITHUB_ENV
+
+            - name: Replace tokens in Manifest file
+              uses: cschleiden/replace-tokens@v1
+              with:
+                  tokenPrefix: "_{_"
+                  tokenSuffix: "_}_"
+                  files: kubernetes/development/*.yaml
+              env:
+                  NAMESPACE: "dev"
+                  REPLICAS: "2"
+                  IMAGE: ${{ vars.DOCKER_USERNAME }}/solar-system:${{ github.sha }}
+                  INGRESS_IP: ${{ env.INGRESS_IP }}
+
+            - name: Check files
+              run: |
+                  echo "Modified Deployment Manifest:"
+                  cat kubernetes/development/deployment.yaml
+
+            - name: Create MongoDB Secret
+              run: |
+                  kubectl create secret generic mongo-db-creds \
+                  --from-literal=mongo_uri=${{ env.MONGO_URI }} \
+                  --from-literal=username=${{ vars.MONGO_USERNAME }} \
+                  --from-literal=password=${{ secrets.MONGO_PASSWORD }} \
+                  -n dev --dry-run=client -o yaml | kubectl apply -f -
+
+            - name: Deploy to Kubernetes
+              run: |
+                  kubectl apply -f kubernetes/development/
+
+            - name: Set App Ingress Host URL
+              id: set-ingress-url
+              run: |
+                  echo "APP_INGRESS_HOST=$(kubectl get ingress -n dev solar-system-ingress -o jsonpath='{.status.loadBalancer.ingress[0].ip}')" >> $GITHUB_OUTPUT
