@@ -59,14 +59,20 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
 
-      - name: Cache Node Modules
-        uses: actions/cache@v3
-        with:
-          path: node_modules
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+      # - name: Cache Node Modules
+      #   uses: actions/cache@v3
+      #   with:
+      #     path: node_modules
+      #     key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
 
-      - name: Install Dependencies
-        run: npm install
+      # - name: Install Dependencies
+      #   run: npm install
+
+      # Instead of using the cache action and install dependencies separately, we can create a custom action to handle both caching and installing dependencies in one step.
+      - name: Custom Composite Action - Install Dependencies and Cache
+        uses: ./.github/custom-actions/npm-action
+        with:
+          path-to-folder: node_modules
 
       - name: Unit Testing
         id: node-test
@@ -115,8 +121,13 @@ jobs:
       #   with:
       #     node-version: 18
 
-      - name: Install Dependencies
-        run: npm install
+      # - name: Install Dependencies
+      #   run: npm install
+
+      - name: Custom Composite Action - Install Dependencies and Cache
+        uses: ./.github/custom-actions/npm-action
+        with:
+          path-to-folder: node_modules
 
       - name: Run Code Coverage
         run: npm run coverage
