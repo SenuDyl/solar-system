@@ -233,6 +233,33 @@ jobs:
             echo "Integration test passed: Status is 'ok'"
           fi
 
+  # After the unit testing and code coverage jobs complete, you can push the reports to AWS S3 bucket using another job
+
+  # You can also add a job to send notifications to Slack or email after the workflow completes, regardless of the outcome (success or failure).
+
+  slack-notification:
+    name: Slack Notification
+    if: always()
+    needs: [dev-integration-test, prod-integration-test]
+    continue-on-error: true
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Send Slack Notification
+        uses: rtcamp/action-slack-notify@v2
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          SLACK_CHANNEL: github-actions-channel
+          SLACK_COLOR: ${{ job.status }}
+          SLACK_TITLE: "Workflow Status Notification"
+          SLACK_MESSAGE: ":hammer_and_wrench: Workflow triggered by ${{ github.actor }}"
+          SLACK_ICON: https://example.com/icon.png
+          SLACK_USERNAME: "GitHub Actions Bot"
+
+
 # Checkout github-actions-solar-system repostory, feature branch, yaml file
 # After the workflow finishes successfully, you can merge the branch to the main branch by raising a PR
 # After merging the PR, the prod-deploy and prod-integration-test jobs will be triggered, and the
