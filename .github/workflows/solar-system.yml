@@ -8,7 +8,7 @@ on:
       - "feature/*"
 
 env:
-  MONGO_URI: "mongodb+srv://supercluster.d83jj.mongodb.net/superData"
+  MONGO_URI: ${{ vars.MONGO_URI }}
   MONGO_USERNAME: ${{ vars.MONGO_USERNAME }}
   MONGO_PASSWORD: ${{ secrets.MONGO_PASSWORD }}
 
@@ -160,7 +160,7 @@ jobs:
           push: true
           tags: ${{ vars.DOCKER_USERNAME }}/solar-system:${{ github.sha }}
 
-  # Here we use a resuable workflow (reuse-deployment.yml) 
+  # Here we use a resuable workflow (reuse-deployment.yml)
   # to deploy the application to both development and production environments.
   # We have to pass secrets from the main workfow to the reusable one
   dev-deploy:
@@ -168,8 +168,12 @@ jobs:
     needs: docker
     uses: ./.github/workflows/reuse-deployment.yml
     secrets:
-        k8-kubeconfig: ${{ secrets.KUBE_CONFIG }}
-        mongo-password: ${{ secrets.MONGO_PASSWORD }}
+      k8-kubeconfig: ${{ secrets.KUBE_CONFIG }}
+      mongo-password: ${{ secrets.MONGO_PASSWORD }}
+    with:
+      mongo-uri: ${{ vars.MONGO_URI }}
+      environment: development
+      k8s-manifest-path: kubernetes/development/
 
   dev-integration-test:
     name: Integration Testing
@@ -199,8 +203,12 @@ jobs:
     needs: docker
     uses: ./.github/workflows/reuse-deployment.yml
     secrets:
-        k8-kubeconfig: ${{ secrets.KUBE_CONFIG }}
-        mongo-password: ${{ secrets.MONGO_PASSWORD }}
+      k8-kubeconfig: ${{ secrets.KUBE_CONFIG }}
+      mongo-password: ${{ secrets.MONGO_PASSWORD }}
+    with:
+      mongo-uri: ${{ vars.MONGO_URI }}
+      environment: production
+      k8s-manifest-path: kubernetes/production/
 
   prod-integration-test:
     if: github.ref == 'refs/heads/main'

@@ -2,6 +2,24 @@ name: Deployment - Reuse Workflow
 
 on:
     workflow_call:
+        inputs:
+            mongo-uri:
+                required: true
+                type: string
+            kubectl_version:
+                required: false
+                type: string
+                default: "latest"
+            k8s-manifest-path:
+                required: true
+                type: string
+                default: "kubernetes/"
+            environment:
+                required: true
+                type: string
+                default: "development"
+            
+        # Here we define the secrets that will be passed from the main workflow to this reusable workflow.           
         secrets:
             k8-kubeconfig:
                 required: true
@@ -17,7 +35,7 @@ jobs:
         # env is used to set environment variables that are available to the steps in the job,
         # while environment is used to specify the deployment environment and its associated settings.
         environment:
-            name: development
+            name: ${{ inputs.environment }}
             url: http://${{ steps.set-ingress-url.outputs.APP_INGRESS_HOST }}
 
         runs-on: ubuntu-latest
@@ -30,12 +48,12 @@ jobs:
             - name: Set up Kubeconfig
               uses: azure/k8s-set-context@v3
               with:
-                  kubeconfig: ${{ secrets.KUBE_CONFIG }}
+                  kubeconfig: ${{ secrets.k8-kubeconfig }}
 
             - name: Install Kubectly CLI
               uses: azure/setup-kubectl@v3
               with:
-                  version: "latest"
+                  version: ${{ inputs.kubectl_version }}
 
             - name: Fetch Kubernetes cluster information
               run: |
@@ -57,7 +75,7 @@ jobs:
               with:
                   tokenPrefix: "_{_"
                   tokenSuffix: "_}_"
-                  files: kubernetes/development/*.yaml
+                  files: ${{ inputs.k8s-manifest-path }}/*.yaml
               env:
                   NAMESPACE: "dev"
                   REPLICAS: "2"
@@ -67,19 +85,19 @@ jobs:
             - name: Check files
               run: |
                   echo "Modified Deployment Manifest:"
-                  cat kubernetes/development/deployment.yaml
+                  cat ${{ inputs.k8s-manifest-path }}/deployment.yaml
 
             - name: Create MongoDB Secret
               run: |
                   kubectl create secret generic mongo-db-creds \
                   --from-literal=mongo_uri=${{ env.MONGO_URI }} \
                   --from-literal=username=${{ vars.MONGO_USERNAME }} \
-                  --from-literal=password=${{ secrets.MONGO_PASSWORD }} \
+                  --from-literal=password=${{ secrets.mongo-password }} \
                   -n dev --dry-run=client -o yaml | kubectl apply -f -
 
             - name: Deploy to Kubernetes
               run: |
-                  kubectl apply -f kubernetes/development/
+                  kubectl apply -f ${{ inputs.k8s-manifest-path }}
 
             - name: Set App Ingress Host URL
               id: set-ingress-url
